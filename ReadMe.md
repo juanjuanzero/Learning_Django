@@ -40,4 +40,8 @@ C:> <venv> <your project root>cd meeting-planner
 C:> <venv> <your project root>\meeting-planner python manage.py runserver
 ```
 
-This will fire up the development server using the settings defined in the _settings.py_ file inside ```<root>\meeting-planner\meeeting-planner``` folder
+This will fire up the development server using the settings defined in the _settings.py_ file inside ```<root>\meeting-planner\meeeting-planner``` folder. The server will be available at ```http://127.0.0.1:8000/```. You will see that a db.sqlite3 file has been added to the parent meeting-planner folder. This is a result of running the server. You'll notice that there are there was another folder name similarly to the project name (meeting-planner). The child folder is the package that pretty much contains the web-app. The two files that we'll be working with throughout is _settings.py_ and _urls.py_.
+
+### That one security warning
+If you navigate to the settings.py file you can see that there is a SECRET_KEY variable storing a strange string of characters. Please be careful not to share any passwords or secrets out in the internet!
+
