@@ -45,3 +45,69 @@ This will fire up the development server using the settings defined in the _sett
 ### That one security warning
 If you navigate to the settings.py file you can see that there is a SECRET_KEY variable storing a strange string of characters. Please be careful not to share any passwords or secrets out in the internet!
 
+## Creating a Simple Web Page
+Here is a summary that we'll do next:
+* Create a Django app
+* Add a view function
+* Assign a URL to the view function
+* Run and view the page
+
+Question: 
+* How does Django serve the page?
+* What are some problems and pitfalls to know?
+
+### Creating a Django App
+The pattern here is to group things via _apps_. _Apps_ are a concept in Django that groups functionality. Here we are going to create an app that represents the website (or frontend). 
+
+We'll run the following code on our Django Project (meeting-planner):
+
+```python manage.py startapp website```
+
+This will add a _website_ folder inside the meeting-planner project (the parent, from now on will be called the project folder). Inside this folder you see a few py files. For this guide, well just focus on the _views.py_ file. Everything else can be deleted.
+
+The views.py (meeting-planner/website/views.py) file is where we will create our views for this project. But before we have to configure the settings so that Django knows about it in _settings.py's_ INSTALLED_APPS setting. We'll add the app name to the INSTALLED_APPS list. It should look like so:
+
+```
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'website',
+```
+
+### Adding the view
+A view is a django component that responds to requests for a webpage. In views.py we'll create welcome function that just returns an HttpResponse with some text like so:
+
+```
+from django.http import HttpResponse
+
+# Create your views here.
+def welcome(request):
+    return HttpResponse("Hello there! Welcome to the Meeting Planner")
+```
+
+Here we are importing the HttpResponse class from django so that it can be used.
+
+### Adding the url
+So there has to be a way we get to the view, we'll need to configure the _urls.py_ so that the resource we created (the welcome function in _veiws.py_) can be visited. We'll go into the _urls.py_ file and add a path in the urlpatterns array. The code should look like so:
+
+```
+from django.contrib import admin
+from django.urls import path
+
+from website.views import welcome
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('welcome.html', welcome)
+]
+```
+
+You see that we are importing the _welcome_ function that is in _website/views.py_. The path method takes in a string function for the pattern and the welcome method.
+
+> If you get red lines with a reference warning beneath welcome this likely means that pycharm doesn't know which is your root project. You can right-click on the meeting-planner project folder (not the app) and mark it as Source root.
+
+If you run the server using the ```python manage.py runserver``` you can navigate to the ```http://127.0.0.1:8000/welcome.html``` and you should be greeted with a page with the text you outlined in the HttpResponse method that is returned by the welcome method.
