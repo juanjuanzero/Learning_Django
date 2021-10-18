@@ -110,4 +110,220 @@ You see that we are importing the _welcome_ function that is in _website/views.p
 
 > If you get red lines with a reference warning beneath welcome this likely means that pycharm doesn't know which is your root project. You can right-click on the meeting-planner project folder (not the app) and mark it as Source root.
 
-If you run the server using the ```python manage.py runserver``` you can navigate to the ```http://127.0.0.1:8000/welcome.html``` and you should be greeted with a page with the text you outlined in the HttpResponse method that is returned by the welcome method.
+If you run the server using the ```python manage.py runserver``` you can navigate to the ```http://127.0.0.1:8000/welcome.html``` and you should be greeted with a page with the text you outlined in the HttpResponse method that is returned by the welcome method. You actually got an error because there wasn't a resource in ```http://127.0.0.1:8000```. 
+
+> When a web server is running. All it's doing is waiting for requests.
+
+We'll add two other endpoints, a date and an about page by following the steps:
+1. Go to the _views.py_ and add functions that take in a _request_ and return an HttpResponse
+2. Go an update _urls.py_ to add url mappings (and import the view functions).
+
+We'll also go ahead and change the mapping for the welcome page to an empty string '' so that requests to ```http://127.0.0.1:8000``` will lead there.  
+
+views.py
+```
+from django.shortcuts import render
+from datetime import datetime
+from django.http import HttpResponse
+
+# Create your views here.
+def welcome(request):
+    return HttpResponse("Hello there! Welcome to the Meeting Planner")
+
+def date(request):
+    return HttpResponse("This page was served at " + datetime.now)
+
+def about(request):
+    return HttpResponse("Hello, world. I am Juan")
+```
+
+urls.py
+```
+from django.contrib import admin
+from django.urls import path
+
+from website.views import welcome, datetime, about
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', welcome),
+    path('date', date),
+    path('about', about)
+]
+```
+## Setting up a Data Model
+Models and Migrations are core concepts to think about when dealing with the data model in Django.
+* **Models** are python classes that maps to a database table. Each instance is an Entity.
+* **Migrations** are an automated way to keep the structure of the db up to date with the model classes. It's not always automatic, as you'll need to write your own migrations if your project gets more complex.
+
+So when you run the server in django you may have been getting a message like the following:
+> You have 18 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): admin, auth, contenttypes, sessions.
+Run 'python manage.py migrate' to apply them.
+
+By default Django includes a slqlite3 db as part of your project, and the 18 migrations it is referring to are migrations for the default apps that come installed in Django. These apps are also listed in the INSTALLED_APPS array under _settings.py_. Its essentially saying: 
+> "Hey your data model may not match what is in the db because there are unapplied migrations here".
+
+We'll run the ```python manage.py showmigrations``` command to see our migrations. It will list out the migrations that have been created for each app that came with Django as default. Next we'll run ```python manage.py migrate``` to run all the currently pending migrations.
+
+### Creating a Model Class
+We now that we have our bearings, well go ahead and add another app into our project to contains all the meeting data for the meeting planner.
+
+We'll run the ```python manage.py startapp meetings``` to create the meetings app. 
+
+Once executed it will generate another app in your project. We'll create the models that this app will interact with in _models.py_. Don't forget to add it to _settings.py_! 
+
+In _models.py_ we'll add a class called Meeting. The Meeting class will need to inherit from the Model class from Django so that it can be represented into the database. We'll also add a title and a date property. Both properties are defined by the methods called on the models module.
+
+models.py
+```
+from django.db import models
+
+# Create your models here.
+class Meeting(models.Model):
+    title = models.CharField(max_length=200)
+    date = models.DateField()
+```
+
+Django will create the __init__ method for us in this Meeting class.
+
+Next we'll need to create a migration so that the django can create the table for the Meeting entities. 
+
+In the commandline:
+```commandline
+python manage.py makemigrations
+```
+
+The migration will find the meeting class and realize that its not in the sqllite db. A new file is added to the migrations folder of the meetings app folder. (If you don't see it right-click and select 'Reload from Disk'). 
+
+The output of this is the _0001_initial.py_ file. If you inspect it there is a migration code that describes the creation of the Meetings table with the _title_ and _date_ fields in the database. There is also an id field that is created as the primary key of for each record in the db.
+
+### Migrating our first migration
+Next we'll go into creating a migration using the ```sqlmigrate <app> <migration_name>```.
+
+In the commandline:
+```commandline
+python manage.py sqlmigrate meetings 0001
+```
+This generates the sql needed to be executed against the db. 
+
+In order to run this migration against the db, we go back to the commandline and enter:
+```commandline
+python manage.py migrate
+```
+This runs all the _currently waiting_ migrations from all the INSTALLED_APPS in _settings.py_.
+
+### Reviewing the Admin User Interface
+With Django you get an admin interface that allows you to perform CRUD operations against your models in your project. For the app that we just created, we need to change the _admin.py_ file inside the meetings app folder.
+
+meetings/admin.py
+```python
+from django.contrib import admin
+from .models import Meeting
+
+admin.site.register(Meeting)
+```
+We are importing the Meeting class into the admin.py and pass it into the admin.site.register method to get it setup for the admin screens. Once setup you  can add/edit/delete Meetings through the admin screen.
+
+But you first need to log in as the admin. To do this you will need to create an admin account.
+
+In the commandline:
+```commandline
+python manage.py createsuperuser
+```
+You will then be able to create a superuser account. Once you are ready, run the server, navigate to the ```http://127.0.0.1:8000/admin``` page, and log in. 
+
+Once logged in add a few Meetings.
+
+>THIS IS NOT YOUR SITE. THIS IS FOR ADMINS ONLY NOT USERS.
+
+### Migration Workflow
+Here is the workflow for future changes and when working with migrations.
+1. Make sure the app is in INSTALLED_APPS
+2. change the model code
+3. Generate the migration script ```python manage.py makemigrations```
+4. Review the migration script (VERY IMPORTANT)
+5. Review other migrations by : ```python manage.py showmigrations```
+6. Run the pending migrations by : ```python manage.py migrate```
+
+### Adding more fields to Meetings
+After reviewing the workflow we'll add two new fields to the Meetings model: _start time_ and _duration_. 
+
+Here's a look at _meetings\models.py_
+```python
+from django.db import models
+from datetime import time
+# Create your models here.
+class Meeting(models.Model):
+    title = models.CharField(max_length=200)
+    date = models.DateField()
+    start_time = models.TimeField(default=time(9))
+    duration = models.IntegerField(default=1)
+```
+There are default parameters passed to define default values. If you were to migrate these changes without default values django will ask you for default values you can define at the time of migration.
+
+Running through the workflow:
+1. meetings app is already in INSTALLED_APPS
+2. the model code has been changed
+3. make the migrations, this created _meetings/migrations/0002_auto_20211017.py_
+4. Reviewing looks like its adding the appropriate fields.
+5. No other migrations are happening
+6. Applying the migration.
+
+### Other changes to models.
+If you change the model's behavior by adding a method to it. Django will not detect any migrations (because there are any changes to make in the db).
+
+Modifying _meetings\models.py_ to this does not create any new migrations
+```python
+from django.db import models
+from datetime import time
+# Create your models here.
+class Meeting(models.Model):
+    title = models.CharField(max_length=200)
+    date = models.DateField()
+    start_time = models.TimeField(default=time(9))
+    duration = models.IntegerField(default=1)
+
+    def __str__(self):
+        return f"{self.title} as {self.start_time} on {self.date}"
+```
+
+### Adding Another Model Class
+We'll add a Room class inside the meetings app. The rooms will have a name, room # and what floor it is on. In _meetings\models.py_ 
+
+We add the Room class:
+```python
+class Room(models.Model):
+    name = models.CharField(max_length=50)
+    floor = models.IntegerField()
+    room_number = models.IntegerField()
+
+    def __str__(self):
+        return f"{self.name} | Room {self.room_number} on {self.floor}"
+```
+
+We'll add a migration to so that the Room table can be added to the db.
+
+We also want to reference a particular room in a meeting, We change the Meeting class to the following:
+```python
+class Meeting(models.Model):
+    title = models.CharField(max_length=200)
+    date = models.DateField()
+    start_time = models.TimeField(default=time(9))
+    duration = models.IntegerField(default=1)
+    room = models.ForeignKey(Room, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.title} as {self.start_time} on {self.date}"
+```
+The room property in the Meeting class will hold the room that the meeting will be held in. It's a ForeignKey to the Room a room object. 
+
+There is an on_delete property here that tells django that if the room was deleted, that delete action will CASCADE into all meetings that reference it. It's basically saying:
+>"Hey if i delete the room, then all the meetings that reference that room via this foreign key should also be deleted"
+
+### A new db...
+> You can only do this at the start of a project.
+Create a migration for the room property on the Meeting class, when you migrate the migrations the django will ask you for default values in the Meeting class... if you dont want to do this, there is another way.
+
+You can delete all the migration scrips in the meetings app folder and delete the slqlite db, then just start off from a fresh migration.
+
+You'll need to create the superuser again.
