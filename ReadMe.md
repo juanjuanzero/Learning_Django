@@ -327,3 +327,133 @@ Create a migration for the room property on the Meeting class, when you migrate 
 You can delete all the migration scrips in the meetings app folder and delete the slqlite db, then just start off from a fresh migration.
 
 You'll need to create the superuser again.
+
+## The Model, Template, View Pattern
+This is also known as MVC. The components are:
+* Models
+* Templates
+* View
+
+First we'll change our welcome page...
+
+### Convention for where templates fall.
+We need to create own templates inside the app. For the website app folder, we'll add a templates folder to hold the templates for this app. Then we'll add another folder called website to prevent name clashes with other apps.
+
+### Changing the Welcome Page
+In our website\templates\website folder, we'll go ahead and add a html page and call it welcome. 
+
+We add the following this welcome page looks like:
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Learning Django</title>
+</head>
+<body>
+<h1>Hello, world!</h1>
+<p>This is my first Django app. This is on github at <a href="https://github.com/juanjuanzero/Learning_Django">my repo</a></p>
+</body>
+</html>
+```
+Next we update the welcome view function inside _views.py_ of the website app folder. The welcome function is updated to:
+
+```python
+def welcome(request):
+    return render(request,"website/welcome.html")
+```
+This returns a render function that is imported by default in views.py. It takes in the request and the path to the html document. The render method here looks for a folder called _templates_ exactly.
+
+### Adding Template variables
+So now that we've seen that we can point to web pages (static sites) within the templates folder, the real power of this is passing in **template variables**. We'll make a few changes to the _welcome.html_ and _welcome view function_.
+
+Updated welcome.html
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Learning Django</title>
+</head>
+<body>
+<h1>Hello, world!</h1>
+<p>This is my first Django app. This is on github at <a href="https://github.com/juanjuanzero/Learning_Django">my repo</a></p>
+<span>{{message}}</span>
+</body>
+</html>
+```
+updated welcome view function
+```python
+def welcome(request):
+    return render(request,"website/welcome.html", {"message": "hello world, this is a message from the view function!"})
+```
+When you run your server, you should see the ```hello world, this is a message from the view function!``` in the welcome page. It's not hard coded in the welcome page its being passed in as part of the render function that is returned from the view function. 
+
+Btw, the passed in variable is called the **_context_**.
+
+So you can see where this is going... you have a database, you have a way to show data, the next step is to just create a way to make changes to the data...
+
+### Creating the Detail Page
+So next we need to create a detail page, this will show the details of any meetings that we have. In the meetings app we'll add a view function called detail. 
+
+First we'll create the templates\meeetings folder. Then add the detail page. Here is a look at the detail page:
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Meeting: {{meeting.title}}</title>
+</head>
+<body>
+<h1>{{meeting.title}}</h1>
+<p>
+    This meeting has been scheduled on {{meeting.date}}, at {{meeting.start_time}} in {{meeting.room}}
+</p>
+</body>
+</html>
+```
+
+See how the properties of a meeting are accessed by the dot? Pretty cool!
+
+
+meetigs\views.py
+```python
+from django.shortcuts import render
+from .models import Meeting
+
+# Create your views here.
+def detail(request, id):
+    meeting = Meeting.objects.get(pk=id)
+    return render(request,"meetings/detail.html", {"meeting": meeting})
+```
+In the detail view function it accesses the objects collection in the Meeting objects and executes the get method to get the meeting with the matching id. Then that is passed into the render method to the detail page.
+
+Next we update the url for the page in the meeting_planner app so that we can get to the detail page. This one will be a bit different since we'll want to have the ID to navigate to a meeting. Here is a look at the urlpatterns list in _urls.py_
+
+```python
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', welcome),
+    path('date', date),
+    path('about', about),
+    path('meetings/<int:id>', detail)
+]
+```
+
+#### What if there are invalid ids?
+As you can see in the code for the detail view there's no way we handle invalid ids. Thankfully the django offers a good way to handle situations like this, we'll update the detail method to say the following
+
+```python
+from django.shortcuts import render, get_object_or_404
+
+#.... other code
+
+def detail(request, id):
+    meeting = get_object_or_404(Meeting, pk=id)
+    return render(request,"meetings/detail.html", {"meeting": meeting})
+```
+
+This is a built-in function that will return a 404 when a meeting id is no longer there.
+
+## Building Urls
+

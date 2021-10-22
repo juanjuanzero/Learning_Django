@@ -4,7 +4,7 @@ from django.http import HttpResponse
 
 # Create your views here.
 def welcome(request):
-    return HttpResponse("Hello there! Welcome to the Meeting Planner")
+    return render(request,"website/welcome.html", {"message": "hello world, this is a message from the view function!"})
 
 def date(request):
     return HttpResponse("This page was served at " + str(datetime.now().date()))
