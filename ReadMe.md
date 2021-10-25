@@ -455,5 +455,205 @@ def detail(request, id):
 
 This is a built-in function that will return a 404 when a meeting id is no longer there.
 
-## Building Urls
+## Building Urls, Listing Items
+So now we have urls that we can navigate to but it would be nice to list them all. Django offers a way to iterate through a collection. We'll update the welcome screen to list out the meetings.
 
+website\templates\website\welcome.html
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Learning Django</title>
+</head>
+<body>
+<h1>Hello, world!</h1>
+<p>This is my first Django app. This is on github at <a href="https://github.com/juanjuanzero/Learning_Django">my repo</a></p>
+<ul>
+    {% for meeting in meetings%}
+    <li><a href="/meetings/{{meeting.id}}">{{meeting.title}}</a> on {{meeting.date}} {{meeting.start_time}} at {{meeting.room.name}}</li>
+    {%endfor%}
+</ul>
+</body>
+</html>
+```
+
+There is a ```{% for meeting in meetings%} ... {%endfor%}``` block of code here that will iterate through the meetings collection and render it on the page.
+
+we'll also update the views.py of the website app for the welcome view function.
+
+website\views.py
+```python
+def welcome(request):
+    mtgs = Meeting.objects.all()
+    return render(request,"website/welcome.html", {"meetings": mtgs})
+```
+
+### There is an anti-pattern here, enter Named Urls
+You see how we hard coded the href tag in the welcome.html file? What if we needed to update the link to something else... and we had 100 pages that referenced that link? That would be bad. Thankfully, Django has Named Urls that we can use so that we'd only have to change it in one place.
+
+We'll update the urls.py for the meeting detail page to pass in a name in the path method.
+
+urls.py's urlpatterns
+```python
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', welcome),
+    path('date', date),
+    path('about', about),
+    path('meetings/<int:id>', detail, name='detail')
+]
+```
+
+Next we'll reference that in our welcome.html inside the href of the link:
+
+```html
+<ul>
+    {% for meeting in meetings%}
+    <li><a href="{% url 'detail' meeting.id %}">{{meeting.title}}</a> on {{meeting.date}} {{meeting.start_time}} at {{meeting.room.name}}</li>
+    {%endfor%}
+</ul>
+```
+
+Inside the href you see ```{% url 'detail' meeting.id %}``` this is a block that references an url with the name 'detail' and a parameter meeting.id is passed into the path. This is called a Named Url
+
+I'll go ahead and add another page for good practice. I added the all rooms page. This has been added to the meetings app.
+
+allRooms.html
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Learning Django</title>
+</head>
+<body>
+<h1>All Rooms</h1>
+<a href="{% url 'home' %}">Home</a>
+<ul>
+    {% for room in rooms %}
+    <li>{{room.name}} | #{{room.room_number}} on {{room.floor}}</li>
+    {% endfor %}
+</ul>
+</body>
+</html>
+```
+
+urls.py's urlpatterns list
+```python
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', welcome, name='home'),
+    path('date', date),
+    path('about', about),
+    path('meetings/<int:id>', detail, name='detail'),
+    path('meetings/allRooms', allRooms, name='all_rooms')
+]
+```
+
+Also added a view function in the meetings app.
+```python
+def allRooms(request):
+    rms = Room.objects.all()
+    return render(request, "meetings/allRooms.html", {"rooms": rms})
+```
+
+### There's another pattern emerging here.
+When the application gets to be too large, it might be a better idea to have the urls scoped to the apps that way the project's urls.py's urlpatterns list won't be so large.
+
+Django offers another way to keep things better organized. You can actually have a urls.py in your meetings app and then just reference them in the project's urls.py.
+
+Here a look at the meetings\urls.py. Notice how it does not include the meetings\ prefix.
+```python
+from django.urls import path
+
+from meetings.views import detail, allRooms
+
+urlpatterns = [
+    path('<int:id>', detail, name='detail'),
+    path('allRooms', allRooms, name='all_rooms')
+]
+```
+In the project urls.py, we'll use the include method to reference the urls in the meetings.py. Here is the new project urls.py
+
+```python
+from django.contrib import admin
+from django.urls import path, include
+
+from website.views import welcome, date, about
+from meetings.views import detail, allRooms
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', welcome, name='home'),
+    path('date', date),
+    path('about', about),
+    path('meetings/', include('meetings.urls'))
+]
+```
+ So here, the last item on the list adds the meetings prefix to the urlpatterns list outlined in the meetings/urls.py file. So then we can keep all of our urls related to meetings in the same file.
+
+## Stylin' all over the place
+Django has a feature called **_Template Inheritance_** to apply the styles across your pages, so you only have to define your styling once.
+
+We'll create a static file that will contain some of the styling for our page. We'll put this in the static folder of the website app.
+
+website\static\website\first_style.css
+```
+body {
+    font-family: sans-serif;
+    color: cornflowerblue;
+    background-color: floralwhite;
+}
+```
+
+We'll create a base.html file that our website app will contain. We'll put this inside the templates folder of the app.
+
+website\templates\base.html
+```html
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'website/first_style.css' %}">
+</head>
+<body>
+{% block content %}
+{% endblock %}
+</body>
+</html>
+```
+At the top you see the ```{%load static%}``` call and the link tag inside the head tag there uses the django templating to define the place where the styling is defined, which is inside the static folder of the website app.
+
+You can see here that it has the django templating blocks. In the body tag you see the ```{% block content %}{% endblock %}```. This is where you will see the content in places that inherit from the _base.html_ file.
+
+Next we'll modify the welcome page to inherit from the base.html file. Here is the changed welcome.html file.
+
+website\welcome.html
+```html
+{% extends "base.html" %}
+
+{% block title %} Welcome! {% endblock %}
+
+{% block content %}
+<h1>Hello, world!</h1>
+<p>This is my first Django app. This is on github at <a href="https://github.com/juanjuanzero/Learning_Django">my repo</a></p>
+<div><a href="{% url 'all_rooms' %}">All Rooms</a></div>
+<ul>
+    {% for meeting in meetings%}
+    <li><a href="{% url 'detail' meeting.id %}">{{meeting.title}}</a> on {{meeting.date}} {{meeting.start_time}} at {{meeting.room.name}}</li>
+    {%endfor%}
+</ul>
+
+{% endblock %}
+```
+
+At the very beginning of the file, there is a ```{% extends "base.html" %}```. This is what tells Django that this page, uses the base.html and extends it with what is inside the ```{% block content %}{% endblock %}``` of base.html. 
+
+Here you can see that only the contents of the body tag remain in the welcome page. The contents are wrapped by ```{% block content %}{% endblock %}```. This is what tells Django what goes inside the block content.
+
+All the other pages can extend base.html in their own way by defining what goes inside the content and title blocks. I'll go ahead and update the other pages.
+
+## Is this even your final FORM?
