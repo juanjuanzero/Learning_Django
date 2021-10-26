@@ -657,3 +657,89 @@ Here you can see that only the contents of the body tag remain in the welcome pa
 All the other pages can extend base.html in their own way by defining what goes inside the content and title blocks. I'll go ahead and update the other pages.
 
 ## Is this even your final FORM?
+A meeting application won't really be useful unless we are able to add more meetings in the future. Next we will add forms to our application so that we can add meetings.
+
+This is a component feature of meetings so we will add it to our meetings app. We'll create a page that will hold the form, and call it new.html
+
+templates\meetings\new.html
+```html
+{% extends "base.html" %}
+
+{% block title %} Add a New Meeting {% endblock %}
+
+{% block content %}
+<h1>Add a New Meeting</h1>
+<form>
+    <table>
+        {{ form }}
+    </table>
+</form>
+{% endblock %}
+```
+Here inside the form and table tag, there is a form object being passed in. We'll talk more about that soon...
+
+We'll add a new method to the view.py
+```python
+from django.forms import modelform_factory
+#... more imports & methods
+MeetingForm = modelform_factory(Meeting, exclude=[])
+
+def new(request):
+    form = MeetingForm()
+    return render(request, "meetings/new.html", {"form":form})
+```
+Here we are importing a MeetingForm object that is a class that gets created from the modelform_factory class. In the new method, we instatiate the MeetingForm into a class and save it into a variable called _form_. That form is an object that gets passed into the view context which then renders input elements into the template.
+
+We'll modify the urls.py in the meeetings app and add the url
+```python
+urlpatterns = [
+    path('<int:id>', detail, name='detail'),
+    path('allRooms', allRooms, name='all_rooms'),
+    path('new', new, name='new')
+]
+```
+
+Then we'll just add a link to the page from the welcome screen.
+
+### Submitting the Form & Saving the Data
+You'll need to add a submit button to the form because django does not add that for you. You'll also need to add the ```{% csrf_token %}``` which protects you from the cross site request forgery attacks into the form.
+
+Here is the modified new template:
+```html
+{% extends "base.html" %}
+
+{% block title %} Add a New Meeting {% endblock %}
+
+{% block content %}
+<h1>Add a New Meeting</h1>
+<form method="post">
+    <table>
+        {{ form }}
+    </table>
+    {% csrf_token %}
+    <button type="submit">Add Meeting</button>
+</form>
+{% endblock %}
+```
+Notice how the method in the form tag says post. This will submit the form to the same url where the form was created. We'll need to modify the new method to handle post requests when users submit the form.
+
+new method in views.py
+```python
+def new(request):
+    if request.method == "POST":
+        form = MeetingForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("welcome")
+    else:
+        form = MeetingForm()
+    return render(request, "meetings/new.html", {"form": form})
+```
+
+Here we are processing requests as they are handled by the new method. 
+* If the method is POST then we create a meeting form object from the request POST data and assign it to the form variable. If the form is valid, we save the data and redirect the user to the welcome page (using the named url)
+* If the method is not POST, we create an empty meeting and store it in the form variable.
+
+If it was not escaped during the submission. At the end we are taken to the new meeting page with the form variable.
+
+
