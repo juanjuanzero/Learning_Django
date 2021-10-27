@@ -782,3 +782,74 @@ Here is a look at the detail page with delete meeting link:
 <a href="{% url 'delete' meeting.id %}">Delete Meething</a>
 {% endblock %}
 ```
+## Adding an Edit method to modify the meeting
+Next we'll go ahead and follow the same set of paths to modify a meeting. 
+
+> We could use the new.html as it will be the mostly the same, but for the sake of simplicity we will just create another page for editing meetings
+
+we'll create a editMeeting.html file in the meetings template app.
+
+```html
+{% extends "base.html" %}
+{% block title %} Edit Meeting {% endblock %}
+{% block content %}
+<h1>Edit Meeting</h1>
+<form method="post">
+    <table>
+        {{ form }}
+    </table>
+    {% csrf_token %}
+    <button type="submit">Update Meeting</button>
+</form>
+{% endblock %}
+```
+You can see that it is very similar to the new.html with a few slight tweaks.
+
+Next we'll add an edit method in the view.py
+```python
+def editMeeting(request, id):
+    meeting = Meeting.objects.get(pk=id)
+    if request.method == "POST":
+        form = MeetingForm(request.POST, instance=meeting)
+        if form.is_valid():
+            form.save()
+            return redirect("home")
+    else:
+        form = MeetingForm(instance=meeting)
+    return render(request, "meetings/editMeeting.html", {"form": form})
+```
+This method also looks a lot like the new method, the only difference here is in the else clause where we are trying to get a meeting to pass into the form when the request is a GET (not a POST). 
+
+Here is a link to the [save method](https://docs.djangoproject.com/en/3.2/topics/forms/modelforms/#the-save-method) in the docs.
+
+Next we'll add a url for in urls patterns list.
+```python
+from django.urls import path
+from meetings.views import detail, allRooms, new, delete, editMeeting
+urlpatterns = [
+    path('<int:id>', detail, name='detail'),
+    path('allRooms', allRooms, name='all_rooms'),
+    path('new', new, name='new'),
+    path('delete/<int:id>', delete, name='delete'),
+    path('editMeeting/<int:id>', editMeeting, name='editMeeting')
+]
+```
+
+And we'll add the link to edit the meeting in the detail page.
+```html
+{% extends "base.html" %}
+
+{% block title %} Detail {% endblock %}
+
+{% block content %}
+<h1>{{meeting.title}}</h1>
+<a href="{% url 'home' %}">Home</a>
+<p>
+    This meeting has been scheduled on {{meeting.date}}, at {{meeting.start_time}} in {{meeting.room}}
+</p>
+<div><a href="{% url 'delete' meeting.id %}">Delete Meething</a></div>
+<div><a href="{% url 'editMeeting' meeting.id %}">Edit Meething</a></div>
+{% endblock %}
+```
+
+And now we can add,edit,delete and see the details of our meetings. Nice Work!

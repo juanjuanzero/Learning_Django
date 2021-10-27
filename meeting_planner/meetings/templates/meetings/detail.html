@@ -8,5 +8,6 @@
 <p>
     This meeting has been scheduled on {{meeting.date}}, at {{meeting.start_time}} in {{meeting.room}}
 </p>
-<a href="{% url 'delete' meeting.id %}">Delete Meething</a>
+<div><a href="{% url 'delete' meeting.id %}">Delete Meething</a></div>
+<div><a href="{% url 'editMeeting' meeting.id %}">Edit Meething</a></div>
 {% endblock %}
