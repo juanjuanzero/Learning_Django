@@ -742,4 +742,43 @@ Here we are processing requests as they are handled by the new method.
 
 If it was not escaped during the submission. At the end we are taken to the new meeting page with the form variable.
 
+## Adding a Delete Method
+So now we are going to implement what we have learned so far and add a delete method, in case a meeting was created in error. All we'll do is add a way to delete a meeting in the detail page of the meeting. This will be a link that we click and once clicked we'll delete a meeting.
 
+views.py
+```python
+def delete(request, id):
+    meeting = Meeting.objects.get(pk=id)
+    if meeting:
+        meeting.delete()
+    return redirect("home")
+```
+
+urls.py in the meetings app
+```python
+from django.urls import path
+from meetings.views import detail, allRooms, new, delete
+
+urlpatterns = [
+    path('<int:id>', detail, name='detail'),
+    path('allRooms', allRooms, name='all_rooms'),
+    path('new', new, name='new'),
+    path('delete', delete, name='delete')
+]
+```
+
+Here is a look at the detail page with delete meeting link:
+```html
+{% extends "base.html" %}
+
+{% block title %} Detail {% endblock %}
+
+{% block content %}
+<h1>{{meeting.title}}</h1>
+<a href="{% url 'home' %}">Home</a>
+<p>
+    This meeting has been scheduled on {{meeting.date}}, at {{meeting.start_time}} in {{meeting.room}}
+</p>
+<a href="{% url 'delete' meeting.id %}">Delete Meething</a>
+{% endblock %}
+```
