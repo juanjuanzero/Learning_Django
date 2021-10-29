@@ -853,3 +853,101 @@ And we'll add the link to edit the meeting in the detail page.
 ```
 
 And now we can add,edit,delete and see the details of our meetings. Nice Work!
+
+## Adding Authentication
+Django out of the box offers a way to authenticate users using the site to make it more secure.We'll go ahead and add authentication to our app. 
+
+We'll go ahead and create a signup view and page so that users can signup. Here is the signup page. You can see that its taking advantage creating a ```{{ form.as_p }}``` template. This comes out of the box from Django using the UserCreationForm.
+
+```html
+{% extends "base.html" %}
+{% block title %} Add a New Meeting {% endblock %}
+{% block content %}
+<h1>Sign Up</h1>
+<form method="post">
+    <table>
+        {{ form.as_p }}
+    </table>
+    {% csrf_token %}
+</form>
+<h3>Already have an account?</h3>
+<a href="{% url 'login' %}">Sign In Here</a>
+{% endblock %}
+```
+
+As mentioned earlier the template takes advantage of form that comes out of the box from Django. In the views.py file in the website, we'll go ahead and import the following libraries for the methods we' use:
+
+```python
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+```
+
+Here is the signup view:
+```python
+def signup(request):
+    if request.user.is_authenticated:
+        return redirect('home')
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password1']
+            user = authenticate(username=username, password=password)
+            login(request, user)
+            return redirect('home')
+        else:
+            return render(request, 'website/signup.html', {'form': form})
+    else:
+        form = UserCreationForm()
+        return render(request, 'website/signup.html', {'form': form})
+
+```
+
+The view first checks if the user is authenticated, if so then they are directed to the home page. If not, then we check if the method is a POST or a GET request. If it's a POST request, then we take in the user credentials by creating an instance of the UserCreationForm. Otherwise, we return a blank instance.
+
+If the form is valid, then we save the credentials (which adds the user) then we authenticate the user by calling the authenticate() and passing the result in the login method, then we redirect to the home screen. 
+
+If the form is not valid, we take them back to the signup screen.
+
+We'll also change the welcome view so that users will be redirected to signin if they are not authenticated.
+
+```python
+def welcome(request):
+    if request.user.is_authenticated:
+        mtgs = Meeting.objects.all()
+        return render(request, "website/welcome.html", {"meetings": mtgs})
+    else:
+        return redirect("website/signin")
+```
+
+Next we'll create the login page and logout functionality.
+```python
+def signin(request):
+    if request.user.is_authenticated:
+        return redirect('home')
+    if request.method == 'POST':
+        username = request.POST['username']
+        password = request.POST['password']
+        user = authenticate(username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('home')
+        else:
+            form = AuthenticationForm()
+            return render(request, 'website/signin.html', {'form': form})
+    else:
+        form = AuthenticationForm()
+        return render(request, 'website/signin.html', {'form': form})
+
+def signout(request):
+    logout(request)
+    return redirect('')
+```
+The signin view functions similarly to the signup view. The only difference is that it uses a different form template. The AuthenticationForm.
+
+Special thanks to the [this guide](https://www.askpython.com/django/django-user-authentication#:~:text=Using%20Django.contrib.auth%20Library%20for%20Using%20Authentication%201%20authenticate.,currently%20logged-in.%204%20AuthenticationForm.%20...%205%20CreateAuthenticationForm.%20) who helped me understand Django Authentication better.
+
+### What kind of authentication does Django offer out of the box? 
+From what I understand, Django uses Basic HTTP Authentication which is the least secure of the authentication methods. Its probably ok for testing scenarios. Please keep this in mind

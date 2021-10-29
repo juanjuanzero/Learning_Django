@@ -11,5 +11,5 @@
     <li><a href="{% url 'detail' meeting.id %}">{{meeting.title}}</a> on {{meeting.date}} {{meeting.start_time}} at {{meeting.room.name}}</li>
     {%endfor%}
 </ul>
-
+<a href = "{% url 'signout' %}">Logout here</a>
 {% endblock %}
